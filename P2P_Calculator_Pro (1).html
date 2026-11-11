@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P2P Арбитраж Калькулятор</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0F172A',
+                        cardBg: '#1E293B',
+                        cardBorder: '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Стилизация скроллбара */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        /* Убираем стрелочки инпутов */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-slate-100 font-sans min-h-screen flex flex-col justify-between p-3 select-none max-w-md mx-auto">
+
+    <!-- Верхняя часть / Основной контент -->
+    <div>
+        <!-- Заголовок и выбор даты -->
+        <header class="mb-3">
+            <div class="flex justify-between items-center mb-2">
+                <h1 class="text-base font-extrabold tracking-wide text-emerald-400 flex items-center gap-1.5">
+                    ⚡ P2P Calc Pro
+                </h1>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">v2.0</span>
+            </div>
+
+            <!-- Навигатор дат -->
+            <div class="bg-cardBg p-2 rounded-xl border border-cardBorder flex justify-between items-center shadow-lg">
+                <button onclick="shiftDate(-1)" class="bg-slate-700 hover:bg-slate-600 active:scale-95 transition-all text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center border border-slate-600">
+                    ◀ Вчера
+                </button>
+                <div class="relative">
+                    <input type="date" id="currentDate" onchange="changeDate(this.value)" class="bg-slate-900 text-xs font-bold text-center text-emerald-400 px-2 py-1 rounded-lg border border-slate-700 focus:outline-none cursor-pointer">
+                </div>
+                <button onclick="shiftDate(1)" class="bg-slate-700 hover:bg-slate-600 active:scale-95 transition-all text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center border border-slate-600">
+                    Завтра ▶
+                </button>
+            </div>
+        </header>
+
+        <!-- Две основные колонки: Покупка и Продажа -->
+        <div class="grid grid-cols-2 gap-2 mb-3">
+            <!-- КОЛОНКА ПОКУПКА (BUY) -->
+            <div class="bg-emerald-950/20 border border-emerald-900/40 rounded-xl p-2.5 flex flex-col justify-between shadow-md">
+                <div>
+                    <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-emerald-900/40">
+                        <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                            🟢 Покупка
+                        </span>
+                        <button onclick="openModal('buy')" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white w-7 h-7 rounded-lg text-sm font-bold flex items-center justify-center shadow transition-all">+</button>
+                    </div>
+
+                    <!-- Список ордеров покупки -->
+                    <div id="buyOrdersList" class="space-y-1.5 max-h-52 overflow-y-auto pr-0.5 mb-2">
+                        <!-- Динамический контент -->
+                    </div>
+                </div>
+
+                <!-- Итоги покупки -->
+                <div class="pt-2 border-t border-emerald-900/40 text-[11px] space-y-0.5 bg-emerald-950/40 p-1.5 rounded-lg">
+                    <div class="flex justify-between text-slate-300">
+                        <span>Сумма:</span>
+                        <span id="buyTotalUah" class="font-bold">0.00 ₴</span>
+                    </div>
+                    <div class="flex justify-between text-slate-300">
+                        <span>USDT:</span>
+                        <span id="buyTotalUsdt" class="font-bold">0.00 $</span>
+                    </div>
+                    <div class="flex justify-between text-emerald-400 font-extrabold pt-0.5 border-t border-emerald-900/30">
+                        <span>Сер. курс:</span>
+                        <span id="buyAvgRate">0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- КОЛОНКА ПРОДАЖА (SELL) -->
+            <div class="bg-rose-950/20 border border-rose-900/40 rounded-xl p-2.5 flex flex-col justify-between shadow-md">
+                <div>
+                    <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-rose-900/40">
+                        <span class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                            🔴 Продажа
+                        </span>
+                        <button onclick="openModal('sell')" class="bg-rose-600 hover:bg-rose-500 active:scale-95 text-white w-7 h-7 rounded-lg text-sm font-bold flex items-center justify-center shadow transition-all">+</button>
+                    </div>
+
+                    <!-- Список ордеров продажи -->
+                    <div id="sellOrdersList" class="space-y-1.5 max-h-52 overflow-y-auto pr-0.5 mb-2">
+                        <!-- Динамический контент -->
+                    </div>
+                </div>
+
+                <!-- Итоги продажи -->
+                <div class="pt-2 border-t border-rose-900/40 text-[11px] space-y-0.5 bg-rose-950/40 p-1.5 rounded-lg">
+                    <div class="flex justify-between text-slate-300">
+                        <span>Сумма:</span>
+                        <span id="sellTotalUah" class="font-bold">0.00 ₴</span>
+                    </div>
+                    <div class="flex justify-between text-slate-300">
+                        <span>USDT:</span>
+                        <span id="sellTotalUsdt" class="font-bold">0.00 $</span>
+                    </div>
+                    <div class="flex justify-between text-rose-400 font-extrabold pt-0.5 border-t border-rose-900/30">
+                        <span>Сер. курс:</span>
+                        <span id="sellAvgRate">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Блок «Итоги за день» -->
+        <div class="bg-cardBg border border-cardBorder rounded-xl p-3 shadow-xl mb-3">
+            <div class="text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider flex justify-between items-center">
+                <span>📊 Итоги за день</span>
+                <span id="activeDateLabel" class="text-emerald-400 font-mono text-[11px]"></span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <!-- Спред / Прибыль -->
+                <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+                    <span class="text-slate-400 text-[10px] uppercase font-semibold">Чистый результат (UAH)</span>
+                    <div id="netProfitUah" class="text-base font-black text-emerald-400 mt-1">0.00 ₴</div>
+                </div>
+                
+                <!-- Торговый объем -->
+                <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+                    <span class="text-slate-400 text-[10px] uppercase font-semibold">Объем сделок (USDT)</span>
+                    <div id="totalVolumeUsdt" class="text-base font-black text-blue-400 mt-1">0.00 $</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- БЛОК «ОБЩИЙ ИТОГ (ЗА ВСЕ ВРЕМЯ)» -->
+        <div class="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border border-amber-500/30 rounded-xl p-3 shadow-xl">
+            <div class="text-xs font-bold text-amber-400 uppercase mb-2 tracking-wider flex justify-between items-center border-b border-amber-500/20 pb-1.5">
+                <span class="flex items-center gap-1">🏆 Общий итог (За все дни)</span>
+                <span id="allTimeDaysCount" class="text-[10px] bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/20">0 дн.</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+                <!-- Общая прибыль -->
+                <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+                    <span class="text-slate-400 text-[10px] uppercase font-semibold">Общий спред (UAH)</span>
+                    <div id="allTimeProfitUah" class="text-base font-black text-emerald-400 mt-1">0.00 ₴</div>
+                </div>
+                
+                <!-- Общий оборот -->
+                <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+                    <span class="text-slate-400 text-[10px] uppercase font-semibold">Общий оборот (USDT)</span>
+                    <div id="allTimeVolumeUsdt" class="text-base font-black text-indigo-400 mt-1">0.00 $</div>
+                </div>
+            </div>
+
+            <!-- Средняя прибыль в день -->
+            <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-800/80 flex justify-between items-center text-[11px]">
+                <span class="text-slate-400">Средний профит / день:</span>
+                <span id="avgDailyProfitUah" class="font-extrabold text-emerald-400">0.00 ₴</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Футер -->
+    <footer class="text-center text-[10px] text-slate-500 py-2">
+        Данные автоматически сохраняются в памяти устройства
+    </footer>
+
+    <!-- МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ ОРДЕРА -->
+    <div id="orderModal" class="fixed inset-0 bg-black/75 backdrop-blur-xs hidden z-50 flex items-center justify-center p-3">
+        <div class="bg-cardBg border border-cardBorder rounded-2xl w-full max-w-xs p-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-3">
+                <h3 id="modalTitle" class="text-sm font-bold uppercase tracking-wider text-emerald-400">Добавить ордер</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200 text-lg leading-none">&times;</button>
+            </div>
+            
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Курс UAH:</label>
+                    <input type="number" step="0.01" id="orderRate" placeholder="авто / например 41.50" oninput="handleInputChange('rate')" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Сумма UAH (Гривны):</label>
+                    <input type="number" step="0.01" id="orderUah" placeholder="0.00" oninput="handleInputChange('uah')" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Сумма USDT (Крипта):</label>
+                    <input type="number" step="0.01" id="orderUsdt" placeholder="0.00" oninput="handleInputChange('usdt')" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+            </div>
+
+            <!-- Сообщение об ошибке -->
+            <div id="modalError" class="text-rose-400 text-[11px] mt-2 hidden text-center">Укажите хотя бы два значения</div>
+
+            <div class="flex gap-2 mt-4">
+                <button onclick="closeModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 active:scale-95 text-slate-300 py-2.5 rounded-lg font-bold text-xs transition-all">Отмена</button>
+                <button onclick="saveOrder()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white py-2.5 rounded-lg font-bold text-xs transition-all shadow-md">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Логика приложения -->
+    <script>
+        let currentDate = new Date().toISOString().split('T')[0];
+        let currentType = 'buy';
+        let lastChanged = [];
+        
+        let ordersData = {};
+        try {
+            ordersData = JSON.parse(localStorage.getItem('p2p_calc_data')) || {};
+        } catch(e) {
+            ordersData = {};
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('currentDate').value = currentDate;
+            render();
+        });
+
+        function changeDate(dateStr) {
+            if(!dateStr) return;
+            currentDate = dateStr;
+            render();
+        }
+
+        function shiftDate(days) {
+            let d = new Date(currentDate);
+            d.setDate(d.getDate() + days);
+            currentDate = d.toISOString().split('T')[0];
+            document.getElementById('currentDate').value = currentDate;
+            render();
+        }
+
+        function openModal(type) {
+            currentType = type;
+            const titleEl = document.getElementById('modalTitle');
+            document.getElementById('modalError').classList.add('hidden');
+
+            if(type === 'buy') {
+                titleEl.innerText = '🟢 Добавить Покупку';
+                titleEl.className = 'text-sm font-bold uppercase tracking-wider text-emerald-400';
+            } else {
+                titleEl.innerText = '🔴 Добавить Продажу';
+                titleEl.className = 'text-sm font-bold uppercase tracking-wider text-rose-400';
+            }
+            
+            document.getElementById('orderRate').value = '';
+            document.getElementById('orderUah').value = '';
+            document.getElementById('orderUsdt').value = '';
+            lastChanged = [];
+            document.getElementById('orderModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('orderModal').classList.add('hidden');
+        }
+
+        // Логика взаимного расчета 3 полей при вводе любах двух
+        function handleInputChange(field) {
+            lastChanged = lastChanged.filter(f => f !== field);
+            lastChanged.push(field);
+            if (lastChanged.length > 2) {
+                lastChanged.shift();
+            }
+
+            const rateEl = document.getElementById('orderRate');
+            const uahEl = document.getElementById('orderUah');
+            const usdtEl = document.getElementById('orderUsdt');
+
+            const rate = parseFloat(rateEl.value) || 0;
+            const uah = parseFloat(uahEl.value) || 0;
+            const usdt = parseFloat(usdtEl.value) || 0;
+
+            // Расчет курса, если введены UAH и USDT
+            if (field !== 'rate' && uah > 0 && usdt > 0) {
+                rateEl.value = (uah / usdt).toFixed(2);
+            }
+            // Расчет USDT, если введены Курс и UAH
+            else if (field !== 'usdt' && rate > 0 && uah > 0) {
+                usdtEl.value = (uah / rate).toFixed(2);
+            }
+            // Расчет UAH, если введены Курс и USDT
+            else if (field !== 'uah' && rate > 0 && usdt > 0) {
+                uahEl.value = (usdt * rate).toFixed(2);
+            }
+        }
+
+        function saveOrder() {
+            let rate = parseFloat(document.getElementById('orderRate').value) || 0;
+            let uah = parseFloat(document.getElementById('orderUah').value) || 0;
+            let usdt = parseFloat(document.getElementById('orderUsdt').value) || 0;
+
+            if (rate <= 0 && uah > 0 && usdt > 0) {
+                rate = uah / usdt;
+            }
+
+            if(rate <= 0 || uah <= 0 || usdt <= 0) {
+                document.getElementById('modalError').classList.remove('hidden');
+                return;
+            }
+
+            if(!ordersData[currentDate]) {
+                ordersData[currentDate] = { buy: [], sell: [] };
+            }
+
+            ordersData[currentDate][currentType].push({
+                id: Date.now(),
+                rate,
+                uah,
+                usdt
+            });
+
+            localStorage.setItem('p2p_calc_data', JSON.stringify(ordersData));
+            closeModal();
+            render();
+        }
+
+        function deleteOrder(type, id) {
+            if(ordersData[currentDate] && ordersData[currentDate][type]) {
+                ordersData[currentDate][type] = ordersData[currentDate][type].filter(o => o.id !== id);
+                localStorage.setItem('p2p_calc_data', JSON.stringify(ordersData));
+                render();
+            }
+        }
+
+        function render() {
+            document.getElementById('activeDateLabel').innerText = currentDate;
+            const dayData = ordersData[currentDate] || { buy: [], sell: [] };
+
+            // Покупки
+            let buyHtml = '';
+            let buyTotalUah = 0, buyTotalUsdt = 0;
+            dayData.buy.forEach(item => {
+                buyTotalUah += item.uah;
+                buyTotalUsdt += item.usdt;
+                buyHtml += `
+                    <div class="bg-emerald-950/40 border border-emerald-900/50 p-2 rounded-lg flex justify-between items-center text-[11px] shadow-xs">
+                        <div>
+                            <div class="font-extrabold text-emerald-300">${item.rate.toFixed(2)} ₴</div>
+                            <div class="text-slate-400 text-[10px]">${item.uah.toFixed(2)} ₴ / <span class="text-slate-300 font-semibold">${item.usdt.toFixed(2)}$</span></div>
+                        </div>
+                        <button onclick="deleteOrder('buy', ${item.id})" class="text-slate-500 hover:text-rose-400 p-1 font-bold text-sm leading-none transition-colors">✕</button>
+                    </div>
+                `;
+            });
+            document.getElementById('buyOrdersList').innerHTML = buyHtml || '<div class="text-center text-slate-500 text-[10px] py-4">Нет ордеров</div>';
+            document.getElementById('buyTotalUah').innerText = buyTotalUah.toFixed(2) + ' ₴';
+            document.getElementById('buyTotalUsdt').innerText = buyTotalUsdt.toFixed(2) + ' $';
+            const buyAvg = buyTotalUsdt > 0 ? (buyTotalUah / buyTotalUsdt).toFixed(2) : '0.00';
+            document.getElementById('buyAvgRate').innerText = buyAvg;
+
+            // Продажи
+            let sellHtml = '';
+            let sellTotalUah = 0, sellTotalUsdt = 0;
+            dayData.sell.forEach(item => {
+                sellTotalUah += item.uah;
+                sellTotalUsdt += item.usdt;
+                sellHtml += `
+                    <div class="bg-rose-950/40 border border-rose-900/50 p-2 rounded-lg flex justify-between items-center text-[11px] shadow-xs">
+                        <div>
+                            <div class="font-extrabold text-rose-300">${item.rate.toFixed(2)} ₴</div>
+                            <div class="text-slate-400 text-[10px]">${item.uah.toFixed(2)} ₴ / <span class="text-slate-300 font-semibold">${item.usdt.toFixed(2)}$</span></div>
+                        </div>
+                        <button onclick="deleteOrder('sell', ${item.id})" class="text-slate-500 hover:text-rose-400 p-1 font-bold text-sm leading-none transition-colors">✕</button>
+                    </div>
+                `;
+            });
+            document.getElementById('sellOrdersList').innerHTML = sellHtml || '<div class="text-center text-slate-500 text-[10px] py-4">Нет ордеров</div>';
+            document.getElementById('sellTotalUah').innerText = sellTotalUah.toFixed(2) + ' ₴';
+            document.getElementById('sellTotalUsdt').innerText = sellTotalUsdt.toFixed(2) + ' $';
+            const sellAvg = sellTotalUsdt > 0 ? (sellTotalUah / sellTotalUsdt).toFixed(2) : '0.00';
+            document.getElementById('sellAvgRate').innerText = sellAvg;
+
+            // Итоги дня
+            const netProfit = sellTotalUah - buyTotalUah;
+            const profitEl = document.getElementById('netProfitUah');
+            profitEl.innerText = (netProfit >= 0 ? '+' : '') + netProfit.toFixed(2) + ' ₴';
+            profitEl.className = `text-base font-black ${netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+            document.getElementById('totalVolumeUsdt').innerText = (buyTotalUsdt + sellTotalUsdt).toFixed(2) + ' $';
+
+            // Общий итог за все время
+            let grandTotalProfitUah = 0;
+            let grandTotalVolumeUsdt = 0;
+            let activeDaysCount = 0;
+
+            Object.keys(ordersData).forEach(dateKey => {
+                const day = ordersData[dateKey];
+                let dayBuyUah = 0, dayBuyUsdt = 0;
+                let daySellUah = 0, daySellUsdt = 0;
+
+                if(day.buy) {
+                    day.buy.forEach(o => { dayBuyUah += o.uah; dayBuyUsdt += o.usdt; });
+                }
+                if(day.sell) {
+                    day.sell.forEach(o => { daySellUah += o.uah; daySellUsdt += o.usdt; });
+                }
+
+                if((day.buy && day.buy.length > 0) || (day.sell && day.sell.length > 0)) {
+                    activeDaysCount++;
+                    grandTotalProfitUah += (daySellUah - dayBuyUah);
+                    grandTotalVolumeUsdt += (dayBuyUsdt + daySellUsdt);
+                }
+            });
+
+            const allTimeProfitEl = document.getElementById('allTimeProfitUah');
+            allTimeProfitEl.innerText = (grandTotalProfitUah >= 0 ? '+' : '') + grandTotalProfitUah.toFixed(2) + ' ₴';
+            allTimeProfitEl.className = `text-base font-black ${grandTotalProfitUah >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+            document.getElementById('allTimeVolumeUsdt').innerText = grandTotalVolumeUsdt.toFixed(2) + ' $';
+            document.getElementById('allTimeDaysCount').innerText = activeDaysCount + ' дн.';
+
+            const avgDailyProfit = activeDaysCount > 0 ? (grandTotalProfitUah / activeDaysCount) : 0;
+            const avgProfitEl = document.getElementById('avgDailyProfitUah');
+            avgProfitEl.innerText = (avgDailyProfit >= 0 ? '+' : '') + avgDailyProfit.toFixed(2) + ' ₴';
+            avgProfitEl.className = `font-extrabold ${avgDailyProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+        }
+    </script>
+</body>
+</html>
